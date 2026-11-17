@@ -1,0 +1,14 @@
+@import "tailwindcss";
+
+@theme {
+  --color-gold: #D4AF37;
+  --color-gold-light: #F3E5AB;
+  --color-gold-dark: #AA7C11;
+  --color-maroon: #2B040B;
+  --color-maroon-light: #4A0A17;
+  --color-cream: #FAF8F5;
+  --color-blush: #FDF6F0;
+
+  --font-serif: "Playfair Display", serif;
+  --font-sans: "Plus Jakarta Sans", sans-serif;
+}
