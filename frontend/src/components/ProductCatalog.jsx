@@ -186,12 +186,12 @@ const ProductCatalog = ({ onAddToCart, onAddToWishlist, selectedCategory = 'All'
                                         handleResetZoom();
                                         setSelectedProduct(product);
                                     }}
-                                    className="h-56 sm:h-64 md:h-72 w-full overflow-hidden bg-gray-100 relative cursor-pointer"
+                                    className="aspect-[4/5] sm:aspect-auto sm:h-64 md:h-72 w-full overflow-hidden bg-[#FAF8F5] relative cursor-pointer"
                                 >
                                     <img
                                         src={product.imageUrl}
                                         alt={product.name}
-                                        className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
+                                        className="w-full h-full object-cover object-top group-hover:scale-105 transition duration-500"
                                     />
 
                                     <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white gap-1.5 font-medium text-xs tracking-wider uppercase z-10">
@@ -306,13 +306,13 @@ const ProductCatalog = ({ onAddToCart, onAddToWishlist, selectedCategory = 'All'
                                     });
                                 }
                             }}
-                            className="md:w-1/2 bg-[#FAF8F5] flex items-center justify-center p-5 sm:p-6 relative min-h-[250px] sm:min-h-[340px] md:min-h-[450px] overflow-hidden cursor-zoom-in select-none touch-none"
+                            className="md:w-1/2 bg-[#FAF8F5] flex items-center justify-center p-5 sm:p-6 relative min-h-[260px] sm:min-h-[340px] md:min-h-[450px] overflow-hidden cursor-zoom-in select-none touch-none"
                         >
                             <img
                                 src={selectedProduct.imageUrl}
                                 alt={selectedProduct.name}
                                 style={zoomStyle}
-                                className="max-h-[230px] sm:max-h-[340px] md:max-h-[400px] w-full object-contain drop-shadow-xl transition-transform duration-150 ease-out"
+                                className="max-h-[280px] sm:max-h-[340px] md:max-h-[400px] w-full object-contain drop-shadow-xl transition-transform duration-150 ease-out"
                             />
                             <span className="absolute bottom-2.5 left-2.5 sm:bottom-3 sm:left-3 bg-black/70 text-white text-[9px] sm:text-[10px] px-2.5 sm:px-3 py-1 rounded-full uppercase tracking-widest pointer-events-none shadow-md">
                                 🔍 {isZoomed ? 'Tap to Reset Zoom' : 'Move Cursor / Tap & Drag to Zoom'}
