@@ -207,7 +207,7 @@ const Footer = ({ onNavigate }) => {
                         </li>
                         <li className="flex items-center gap-2.5">
                             <Phone size={15} className="text-[#D4AF37] shrink-0" />
-                            <span>+91 98765 43210 (10 AM – 8 PM IST)</span>
+                            <span>+91 9340334187 (10 AM – 8 PM IST)</span>
                         </li>
                         <li className="flex items-center gap-2.5">
                             <Mail size={15} className="text-[#D4AF37] shrink-0" />
