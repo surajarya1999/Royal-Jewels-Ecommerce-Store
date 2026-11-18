@@ -18,8 +18,22 @@ const ProfilePage = ({
     const handleLogout = async () => {
         try {
             await logoutUser();
+            // Purane user ka local cached data clear karein taaki next login par leak na ho
+            Object.keys(localStorage).forEach((key) => {
+                if (
+                    key.toLowerCase().includes('cart') ||
+                    key.toLowerCase().includes('order') ||
+                    key.toLowerCase().includes('wishlist') ||
+                    key.toLowerCase().includes('royal') ||
+                    key === 'token' ||
+                    key === 'user'
+                ) {
+                    localStorage.removeItem(key);
+                }
+            });
             alert('👋 You have been logged out successfully from Royal Jewels.');
             if (onBackToShop) onBackToShop();
+            window.location.reload(); // React state (cart/wishlist) ko reset karne ke liye
         } catch (error) {
             console.error("Logout Error:", error);
             alert("❌ Logout Failed. Please try again.");

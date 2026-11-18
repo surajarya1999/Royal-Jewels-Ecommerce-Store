@@ -1,18 +1,32 @@
 // src/pages/CheckoutPage.jsx
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ShieldCheck, CreditCard, ArrowLeft, Loader2, MapPin, Sparkles, Lock } from 'lucide-react';
 import { createRazorpayOrder, saveOrderRecord } from '../services/api';
+import { auth } from '../services/firebase';
 
 const CheckoutPage = ({ cartItems, onBackToShop, onOrderSuccess }) => {
+    const currentUser = auth?.currentUser;
+
     const [formData, setFormData] = useState({
-        fullName: '',
-        email: '',
+        fullName: currentUser?.displayName || '',
+        email: currentUser?.email || '',
         phone: '',
         address: '',
         city: '',
         pincode: ''
     });
     const [loading, setLoading] = useState(false);
+
+    // Sync logged-in user email/name automatically
+    useEffect(() => {
+        if (currentUser) {
+            setFormData((prev) => ({
+                ...prev,
+                fullName: prev.fullName || currentUser.displayName || '',
+                email: currentUser.email || prev.email
+            }));
+        }
+    }, [currentUser]);
 
     // Safe subtotal calculation for both Numbers and Strings
     const subtotal = cartItems.reduce((acc, item) => {
@@ -71,6 +85,8 @@ const CheckoutPage = ({ cartItems, onBackToShop, onOrderSuccess }) => {
             }
 
             const { order } = data;
+            const loggedInUser = auth?.currentUser;
+            const accountEmail = (loggedInUser?.email || formData.email || '').toLowerCase().trim();
 
             // 3. Configure Razorpay Options
             const options = {
@@ -84,8 +100,10 @@ const CheckoutPage = ({ cartItems, onBackToShop, onOrderSuccess }) => {
                     try {
                         setLoading(true);
                         const orderPayload = {
+                            userId: loggedInUser?.uid || null,
+                            userEmail: accountEmail,
                             fullName: formData.fullName,
-                            email: formData.email,
+                            email: accountEmail || formData.email,
                             phone: formData.phone,
                             address: formData.address,
                             city: formData.city,
@@ -98,33 +116,38 @@ const CheckoutPage = ({ cartItems, onBackToShop, onOrderSuccess }) => {
 
                         let savedOrderObj = null;
 
-                        // Try saving to backend database
+                        // Save to MongoDB Backend Database
                         try {
                             const saveResponse = await saveOrderRecord(orderPayload);
                             if (saveResponse && saveResponse.success) {
                                 savedOrderObj = saveResponse.order;
                             }
                         } catch (serverErr) {
-                            console.warn("Backend save failed, falling back to local storage:", serverErr);
+                            console.error("Backend DB save failed:", serverErr);
                         }
 
-                        // Guaranteed Fallback: Save to LocalStorage so it instantly shows in Order History
-                        const existingOrders = JSON.parse(localStorage.getItem('royal_jewels_orders') || '[]');
-                        const newLocalOrder = {
+                        // User-Specific Local Cache (taaki ek hi phone par dusre account mein leak na ho)
+                        const storageKey = accountEmail
+                            ? `royal_jewels_orders_${accountEmail}`
+                            : 'royal_jewels_orders_guest';
+
+                        const existingOrders = JSON.parse(localStorage.getItem(storageKey) || '[]');
+                        const newLocalOrder = savedOrderObj || {
                             ...orderPayload,
                             _id: response.razorpay_order_id || `RJ-${Date.now()}`,
                             orderStatus: 'Processing',
                             createdAt: new Date().toISOString()
                         };
-                        localStorage.setItem('royal_jewels_orders', JSON.stringify([newLocalOrder, ...existingOrders]));
+                        localStorage.setItem(storageKey, JSON.stringify([newLocalOrder, ...existingOrders]));
 
                         alert(`🎉 Payment Successful! Payment ID: ${response.razorpay_payment_id}`);
 
                         onOrderSuccess({
                             ...formData,
+                            email: accountEmail || formData.email,
                             paymentId: response.razorpay_payment_id,
                             orderId: response.razorpay_order_id,
-                            dbOrder: savedOrderObj || newLocalOrder
+                            dbOrder: newLocalOrder
                         });
 
                     } catch (err) {
@@ -136,14 +159,14 @@ const CheckoutPage = ({ cartItems, onBackToShop, onOrderSuccess }) => {
                 },
                 prefill: {
                     name: formData.fullName,
-                    email: formData.email,
+                    email: accountEmail || formData.email,
                     contact: formData.phone,
                 },
                 notes: {
                     address: formData.address,
                 },
                 theme: {
-                    color: "#2B040B", // Royal Maroon Theme
+                    color: "#2B040B",
                 },
             };
 
@@ -158,7 +181,6 @@ const CheckoutPage = ({ cartItems, onBackToShop, onOrderSuccess }) => {
         }
     };
 
-    // Shared sleek input class for uniform mobile & desktop typography
     const inputClass =
         "w-full px-3.5 py-2.5 sm:px-4 sm:py-3 text-xs sm:text-sm placeholder:text-xs placeholder:text-gray-400 rounded-xl bg-[#FAF8F5]/60 border border-[#EED9C4] text-gray-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent transition";
 
@@ -301,10 +323,11 @@ const CheckoutPage = ({ cartItems, onBackToShop, onOrderSuccess }) => {
                                         type="email"
                                         name="email"
                                         required
+                                        readOnly={Boolean(currentUser?.email)}
                                         placeholder="ananya@gmail.com"
                                         value={formData.email}
                                         onChange={handleInputChange}
-                                        className={inputClass}
+                                        className={`${inputClass} ${currentUser?.email ? 'opacity-80 cursor-not-allowed' : ''}`}
                                     />
                                 </div>
                                 <div>

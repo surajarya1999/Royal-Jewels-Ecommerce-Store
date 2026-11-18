@@ -1,4 +1,4 @@
-// src/components/OrderHistory.jsx (or src/pages/OrderHistory.jsx)
+// src/components/Profile/OrderHistory.jsx
 import { useState, useEffect } from 'react';
 import { Package, MapPin, ShieldCheck, Loader2, CheckCircle2, Truck, Check, Calendar } from 'lucide-react';
 import { auth } from '../../services/firebase';
@@ -10,37 +10,60 @@ const OrderHistory = () => {
 
     useEffect(() => {
         const fetchOrders = async (currentUser) => {
+            setLoading(true);
             try {
-                const userEmail = currentUser?.email;
+                // Purana global shared key clean karein taaki cross-account leak na ho
+                localStorage.removeItem('royal_jewels_orders');
 
-                // 1. Dynamic Backend API call (Localhost:5000 & Live Atlas Backend)
+                const userEmail = currentUser?.email?.toLowerCase().trim();
+
+                if (!userEmail) {
+                    setOrders([]);
+                    setLoading(false);
+                    return;
+                }
+
+                // 1. Backend MongoDB API se logged-in user ke orders fetch karein
                 let fetchedOrders = [];
                 try {
-                    const { data } = await API.get('/orders');
-                    fetchedOrders = data.orders || data || [];
+                    const { data } = await API.get('/orders', {
+                        params: { email: userEmail }
+                    });
+                    const rawList = data.orders || data || [];
+                    if (Array.isArray(rawList)) {
+                        fetchedOrders = rawList;
+                    }
                 } catch (err) {
-                    console.log("Backend API not reachable, falling back to local storage.", err);
+                    console.warn("Backend orders fetch warning:", err.message);
                 }
 
-                // 2. LocalStorage se bhi orders uthao
-                const localOrders = JSON.parse(localStorage.getItem('royal_jewels_orders') || '[]');
+                // 2. User-specific local cache uthayein
+                const storageKey = `royal_jewels_orders_${userEmail}`;
+                const localOrders = JSON.parse(localStorage.getItem(storageKey) || '[]');
 
-                // Combine both and remove duplicates based on orderId/_id
-                const combined = [...localOrders, ...fetchedOrders];
-                const uniqueOrders = Array.from(new Map(combined.map(o => [o.orderId || o._id, o])).values());
+                // 3. Combine & deduplicate by orderId / paymentId / _id
+                const combined = [...fetchedOrders, ...localOrders];
+                const uniqueOrders = Array.from(
+                    new Map(
+                        combined.map((o) => [o.orderId || o.paymentId || o._id, o])
+                    ).values()
+                );
 
-                // 3. Agar user logged in hai, toh sirf uske email ke orders filter karo
-                if (userEmail) {
-                    const userFiltered = uniqueOrders.filter(o =>
-                        !o.email || o.email.toLowerCase() === userEmail.toLowerCase()
-                    );
-                    setOrders(userFiltered.length > 0 ? userFiltered : uniqueOrders);
-                } else {
-                    setOrders(uniqueOrders);
+                // 4. Strictly isi logged-in email ke orders filter karein (kabhi dusre user ka order na dikhayein)
+                const userFiltered = uniqueOrders.filter((o) => {
+                    const orderEmail = (o.userEmail || o.email || '').toLowerCase().trim();
+                    return orderEmail === userEmail;
+                });
+
+                // Agar MongoDB se fresh orders mil gaye hain toh local cache ko sync kar dein
+                if (userFiltered.length > 0) {
+                    localStorage.setItem(storageKey, JSON.stringify(userFiltered));
                 }
 
+                setOrders(userFiltered);
             } catch (error) {
                 console.error("Error fetching order history:", error);
+                setOrders([]);
             } finally {
                 setLoading(false);
             }
@@ -53,16 +76,14 @@ const OrderHistory = () => {
         return () => unsubscribe();
     }, []);
 
-    // Delivery Steps Status Helper
     const getStepProgress = (status = 'Processing') => {
         const lower = status.toLowerCase();
         if (lower.includes('delivered')) return 4;
         if (lower.includes('shipped') || lower.includes('transit')) return 3;
         if (lower.includes('processing') || lower.includes('confirmed') || lower.includes('paid')) return 2;
-        return 1; // Placed
+        return 1;
     };
 
-    // Date & Time Formatter Helper
     const formatOrderDate = (dateString) => {
         if (!dateString) return 'Recent Order';
         const date = new Date(dateString);
@@ -91,7 +112,7 @@ const OrderHistory = () => {
                 <Package size={44} className="mx-auto text-[#D4AF37]" />
                 <h3 className="font-serif text-lg sm:text-xl font-bold text-[#2B040B]">No Orders Found</h3>
                 <p className="text-xs text-gray-500 max-w-sm mx-auto leading-relaxed">
-                    Aapne abhi tak koi luxury order place nahi kiya hai. Checkout complete karne ke baad aapke saare orders yahan live dikhenge.
+                    Aapne abhi tak is account se koi order place nahi kiya hai. Checkout complete karne ke baad aapke saare orders yahan live dikhenge.
                 </p>
             </div>
         );
@@ -107,7 +128,7 @@ const OrderHistory = () => {
             <div className="space-y-4 sm:space-y-6">
                 {orders.map((order, idx) => {
                     const currentStep = getStepProgress(order.orderStatus || order.status);
-                    const isPaymentSuccess = (order.paymentId || order.status === 'Paid' || order.status === 'Confirmed' || true);
+                    const isPaymentSuccess = Boolean(order.paymentId || order.status === 'Paid' || order.status === 'Confirmed' || true);
                     const orderItems = order.items || order.cartItems || order.products || [];
                     const orderDateFormatted = formatOrderDate(order.createdAt || order.date || order.orderDate);
 
@@ -123,7 +144,7 @@ const OrderHistory = () => {
                                         Order Reference
                                     </span>
                                     <span className="font-mono font-bold text-[#2B040B] text-xs sm:text-sm break-all">
-                                        {order.orderId || order._id || `RJ-${Math.floor(100000 + Math.random() * 900000)}`}
+                                        {order.orderId || order._id}
                                     </span>
                                     <span className="flex items-center gap-1 text-[11px] text-gray-500 mt-1 font-medium">
                                         <Calendar size={12} className="text-[#D4AF37] shrink-0" /> {orderDateFormatted}
@@ -146,7 +167,7 @@ const OrderHistory = () => {
                                 </div>
                             </div>
 
-                            {/* 2. Ordered Products List Display Section */}
+                            {/* 2. Ordered Products List */}
                             <div className="space-y-2.5 sm:space-y-3">
                                 <h4 className="text-[11px] sm:text-xs font-bold text-[#2B040B] uppercase tracking-wider">
                                     Ordered Masterpieces ({orderItems.length})
@@ -192,10 +213,8 @@ const OrderHistory = () => {
                                 </h4>
 
                                 <div className="grid grid-cols-4 gap-1 sm:gap-2 pt-1.5 text-center relative">
-                                    {/* Connecting Progress Line */}
                                     <div className="absolute top-[18px] sm:top-[20px] left-[12%] right-[12%] h-[2px] bg-[#EED9C4] z-0" />
 
-                                    {/* Step 1: Placed */}
                                     <div className="flex flex-col items-center space-y-1 relative z-10">
                                         <div className={`w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center text-[11px] sm:text-xs font-bold shadow-2xs ${currentStep >= 1 ? 'bg-[#2B040B] text-[#D4AF37]' : 'bg-gray-200 text-gray-500'}`}>
                                             {currentStep > 1 ? <Check size={13} /> : '1'}
@@ -203,7 +222,6 @@ const OrderHistory = () => {
                                         <span className="text-[9px] sm:text-[10px] font-bold text-gray-700 leading-tight">Placed</span>
                                     </div>
 
-                                    {/* Step 2: Processing */}
                                     <div className="flex flex-col items-center space-y-1 relative z-10">
                                         <div className={`w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center text-[11px] sm:text-xs font-bold shadow-2xs ${currentStep >= 2 ? 'bg-[#2B040B] text-[#D4AF37]' : 'bg-gray-200 text-gray-500'}`}>
                                             {currentStep > 2 ? <Check size={13} /> : '2'}
@@ -211,7 +229,6 @@ const OrderHistory = () => {
                                         <span className="text-[9px] sm:text-[10px] font-bold text-gray-700 leading-tight">Processing</span>
                                     </div>
 
-                                    {/* Step 3: Shipped */}
                                     <div className="flex flex-col items-center space-y-1 relative z-10">
                                         <div className={`w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center text-[11px] sm:text-xs font-bold shadow-2xs ${currentStep >= 3 ? 'bg-[#2B040B] text-[#D4AF37]' : 'bg-gray-200 text-gray-500'}`}>
                                             {currentStep > 3 ? <Check size={13} /> : '3'}
@@ -219,7 +236,6 @@ const OrderHistory = () => {
                                         <span className="text-[9px] sm:text-[10px] font-bold text-gray-700 leading-tight">In Transit</span>
                                     </div>
 
-                                    {/* Step 4: Delivered */}
                                     <div className="flex flex-col items-center space-y-1 relative z-10">
                                         <div className={`w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center text-[11px] sm:text-xs font-bold shadow-2xs ${currentStep >= 4 ? 'bg-emerald-600 text-white' : 'bg-gray-200 text-gray-500'}`}>
                                             {currentStep >= 4 ? <Check size={13} /> : '4'}

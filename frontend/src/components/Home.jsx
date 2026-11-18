@@ -149,36 +149,69 @@ const Home = () => {
             </div>
 
             {/* 3. FEATURES TRUST INDICATORS BAR */}
-            <div className="bg-[#4A0A17] text-[#FAF8F5] py-6 px-4 border-y border-[#D4AF37]/30">
-                <div className="max-w-7xl mx-auto grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 text-center">
-                    <div className="flex items-center justify-center gap-3">
-                        <ShieldCheck className="text-[#D4AF37]" size={28} />
-                        <div className="text-left">
-                            <h4 className="font-bold text-xs uppercase tracking-wider text-[#D4AF37]">Anti-Tarnish Polish</h4>
-                            <p className="text-[11px] text-gray-300">22K Micro Gold-Plated Finish</p>
+            <div className="bg-[#4A0A17] text-[#FAF8F5] py-5 sm:py-6 px-3.5 sm:px-6 border-y border-[#D4AF37]/30">
+                <div className="max-w-7xl mx-auto grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5">
+
+                    {/* 1. Anti-Tarnish Polish */}
+                    <div className="flex items-start sm:items-center gap-2.5 sm:gap-3 bg-[#2B040B]/50 sm:bg-transparent p-3 sm:p-2 rounded-xl border border-[#D4AF37]/15 sm:border-none">
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-[#D4AF37]/10 border border-[#D4AF37]/30 flex items-center justify-center shrink-0 mt-0.5 sm:mt-0">
+                            <ShieldCheck className="text-[#D4AF37]" size={18} />
+                        </div>
+                        <div className="text-left min-w-0">
+                            <h4 className="font-bold text-[11px] sm:text-xs uppercase tracking-wider text-[#D4AF37] leading-tight">
+                                Anti-Tarnish Polish
+                            </h4>
+                            <p className="text-[10px] sm:text-[11px] text-gray-300 leading-snug mt-0.5">
+                                22K Micro Gold-Plated Finish
+                            </p>
                         </div>
                     </div>
-                    <div className="flex items-center justify-center gap-3">
-                        <Truck className="text-[#D4AF37]" size={28} />
-                        <div className="text-left">
-                            <h4 className="font-bold text-xs uppercase tracking-wider text-[#D4AF37]">Express Shipping</h4>
-                            <p className="text-[11px] text-gray-300">Free Secure Pan-India Delivery</p>
+
+                    {/* 2. Express Shipping */}
+                    <div className="flex items-start sm:items-center gap-2.5 sm:gap-3 bg-[#2B040B]/50 sm:bg-transparent p-3 sm:p-2 rounded-xl border border-[#D4AF37]/15 sm:border-none">
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-[#D4AF37]/10 border border-[#D4AF37]/30 flex items-center justify-center shrink-0 mt-0.5 sm:mt-0">
+                            <Truck className="text-[#D4AF37]" size={18} />
+                        </div>
+                        <div className="text-left min-w-0">
+                            <h4 className="font-bold text-[11px] sm:text-xs uppercase tracking-wider text-[#D4AF37] leading-tight">
+                                Express Shipping
+                            </h4>
+                            <p className="text-[10px] sm:text-[11px] text-gray-300 leading-snug mt-0.5">
+                                Free Secure Pan-India Delivery
+                            </p>
                         </div>
                     </div>
-                    <div className="flex items-center justify-center gap-3">
-                        <RefreshCw className="text-[#D4AF37]" size={28} />
-                        <div className="text-left">
-                            <h4 className="font-bold text-xs uppercase tracking-wider text-[#D4AF37]">Easy Replacement</h4>
-                            <p className="text-[11px] text-gray-300">7-Day Quality Guarantee</p>
+
+                    {/* 3. Easy Replacement */}
+                    <div className="flex items-start sm:items-center gap-2.5 sm:gap-3 bg-[#2B040B]/50 sm:bg-transparent p-3 sm:p-2 rounded-xl border border-[#D4AF37]/15 sm:border-none">
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-[#D4AF37]/10 border border-[#D4AF37]/30 flex items-center justify-center shrink-0 mt-0.5 sm:mt-0">
+                            <RefreshCw className="text-[#D4AF37]" size={18} />
+                        </div>
+                        <div className="text-left min-w-0">
+                            <h4 className="font-bold text-[11px] sm:text-xs uppercase tracking-wider text-[#D4AF37] leading-tight">
+                                Easy Replacement
+                            </h4>
+                            <p className="text-[10px] sm:text-[11px] text-gray-300 leading-snug mt-0.5">
+                                7-Day Quality Guarantee
+                            </p>
                         </div>
                     </div>
-                    <div className="flex items-center justify-center gap-3">
-                        <Sparkles className="text-[#D4AF37]" size={28} />
-                        <div className="text-left">
-                            <h4 className="font-bold text-xs uppercase tracking-wider text-[#D4AF37]">Master Craftsmanship</h4>
-                            <p className="text-[11px] text-gray-300">Celebrity Replica Designs</p>
+
+                    {/* 4. Master Craftsmanship */}
+                    <div className="flex items-start sm:items-center gap-2.5 sm:gap-3 bg-[#2B040B]/50 sm:bg-transparent p-3 sm:p-2 rounded-xl border border-[#D4AF37]/15 sm:border-none">
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-[#D4AF37]/10 border border-[#D4AF37]/30 flex items-center justify-center shrink-0 mt-0.5 sm:mt-0">
+                            <Sparkles className="text-[#D4AF37]" size={18} />
+                        </div>
+                        <div className="text-left min-w-0">
+                            <h4 className="font-bold text-[11px] sm:text-xs uppercase tracking-wider text-[#D4AF37] leading-tight">
+                                Master Craftsmanship
+                            </h4>
+                            <p className="text-[10px] sm:text-[11px] text-gray-300 leading-snug mt-0.5">
+                                Celebrity Replica Designs
+                            </p>
                         </div>
                     </div>
+
                 </div>
             </div>
 

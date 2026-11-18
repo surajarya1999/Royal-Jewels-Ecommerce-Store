@@ -1,5 +1,5 @@
 // src/App.jsx
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Navbar from './components/Navbar';
 import Home from './components/Home';
 import CelebrityGlam from './components/CelebrityGlam';
@@ -17,11 +17,34 @@ import CollectionsPage from './pages/CollectionsPage';
 import AboutPage from './pages/AboutPage';
 import ContactPage from './pages/ContactPage';
 import RoyalAIChatbot from './components/RoyalAIChatbot';
+import { auth } from './services/firebase';
+
+const VALID_PAGES = [
+  'home',
+  'wishlist',
+  'cart',
+  'collections',
+  'about',
+  'contact',
+  'profile',
+  'checkout',
+  'tracking',
+  'admin'
+];
+
+// URL hash ya localStorage se initial page nikalne ka helper
+const getInitialPage = () => {
+  const hashPage = window.location.hash.replace('#', '').trim();
+  if (VALID_PAGES.includes(hashPage)) {
+    return hashPage;
+  }
+  const savedPage = localStorage.getItem('royal_jewels_active_page');
+  return VALID_PAGES.includes(savedPage) ? savedPage : 'home';
+};
 
 function App() {
-  const [currentPage, setCurrentPage] = useState(() => {
-    return localStorage.getItem('royal_jewels_active_page') || 'home';
-  });
+  const [currentPage, setCurrentPage] = useState(getInitialPage);
+  const [userKey, setUserKey] = useState('guest');
 
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(() => {
     return sessionStorage.getItem('royal_admin_auth') === 'true';
@@ -29,7 +52,7 @@ function App() {
 
   const [cartItems, setCartItems] = useState(() => {
     try {
-      return JSON.parse(localStorage.getItem('royal_jewels_cart') || '[]');
+      return JSON.parse(localStorage.getItem('royal_jewels_cart_guest') || '[]');
     } catch {
       return [];
     }
@@ -37,7 +60,7 @@ function App() {
 
   const [wishlistItems, setWishlistItems] = useState(() => {
     try {
-      return JSON.parse(localStorage.getItem('royal_jewels_wishlist') || '[]');
+      return JSON.parse(localStorage.getItem('royal_jewels_wishlist_guest') || '[]');
     } catch {
       return [];
     }
@@ -47,19 +70,88 @@ function App() {
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
 
+  // Firebase Auth listener: har logged-in user ke liye alag cart & wishlist load karein
   useEffect(() => {
-    localStorage.setItem('royal_jewels_cart', JSON.stringify(cartItems));
-  }, [cartItems]);
+    // Purana shared cart/wishlist clean karein taaki cross-account leak na ho
+    localStorage.removeItem('royal_jewels_cart');
+    localStorage.removeItem('royal_jewels_wishlist');
+
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      const nextKey = user?.email ? user.email.toLowerCase().trim() : 'guest';
+      setUserKey(nextKey);
+
+      try {
+        const savedCart = JSON.parse(localStorage.getItem(`royal_jewels_cart_${nextKey}`) || '[]');
+        const savedWishlist = JSON.parse(localStorage.getItem(`royal_jewels_wishlist_${nextKey}`) || '[]');
+        setCartItems(Array.isArray(savedCart) ? savedCart : []);
+        setWishlistItems(Array.isArray(savedWishlist) ? savedWishlist : []);
+      } catch {
+        setCartItems([]);
+        setWishlistItems([]);
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  // User-specific cart & wishlist save karein
+  useEffect(() => {
+    localStorage.setItem(`royal_jewels_cart_${userKey}`, JSON.stringify(cartItems));
+  }, [cartItems, userKey]);
 
   useEffect(() => {
-    localStorage.setItem('royal_jewels_wishlist', JSON.stringify(wishlistItems));
-  }, [wishlistItems]);
+    localStorage.setItem(`royal_jewels_wishlist_${userKey}`, JSON.stringify(wishlistItems));
+  }, [wishlistItems, userKey]);
 
-  const handlePageChange = (page) => {
-    setCurrentPage(page);
-    localStorage.setItem('royal_jewels_active_page', page);
+  // Initial load par browser history state set karein (taaki mobile back button home par ruk sake)
+  useEffect(() => {
+    const initial = getInitialPage();
+    if (initial !== 'home') {
+      // Base entry 'home' aur current entry active page rakhein taaki back dabane par 'home' aaye
+      window.history.replaceState({ page: 'home' }, '', '#home');
+      window.history.pushState({ page: initial }, '', `#${initial}`);
+    } else {
+      window.history.replaceState({ page: 'home' }, '', '#home');
+    }
+
+    const handlePopState = (event) => {
+      const hashPage = window.location.hash.replace('#', '').trim();
+      const targetPage =
+        event.state?.page ||
+        (VALID_PAGES.includes(hashPage) ? hashPage : 'home');
+
+      setCurrentPage(targetPage);
+      localStorage.setItem('royal_jewels_active_page', targetPage);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  // Step-by-step navigation handler (Push history + Refresh persistence)
+  const handlePageChange = useCallback((page) => {
+    const targetPage = VALID_PAGES.includes(page) ? page : 'home';
+
+    setCurrentPage((prevPage) => {
+      if (prevPage !== targetPage) {
+        window.history.pushState({ page: targetPage }, '', `#${targetPage}`);
+      }
+      return targetPage;
+    });
+
+    localStorage.setItem('royal_jewels_active_page', targetPage);
     window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
+  }, []);
+
+  // Mobile-friendly Back handler (agar history hai toh step back, warna home)
+  const handleSmartBack = useCallback(() => {
+    if (window.history.length > 1 && currentPage !== 'home') {
+      window.history.back();
+    } else {
+      handlePageChange('home');
+    }
+  }, [currentPage, handlePageChange]);
 
   const handleAddToCart = (item) => {
     setCartItems((prev) => {
@@ -84,7 +176,7 @@ function App() {
     handlePageChange('checkout');
   };
 
-  // Toggle Wishlist (Add agar nahi hai, Remove agar pehle se hai)
+  // Toggle Wishlist
   const handleAddToWishlistt = (item) => {
     setWishlistItems((prev) => {
       const exists = prev.some((i) => i.name === item.name);
@@ -162,7 +254,7 @@ function App() {
             wishlistItems={wishlistItems}
             onAddToCart={handleAddToCart}
             onRemoveWishlist={handleRemoveWishlist}
-            onBackToShop={() => handlePageChange('home')}
+            onBackToShop={handleSmartBack}
           />
         )}
 
@@ -171,7 +263,7 @@ function App() {
             cartItems={cartItems}
             onRemoveItem={handleRemoveFromCart}
             onCheckout={handleProceedToCheckout}
-            onBackToShop={() => handlePageChange('home')}
+            onBackToShop={handleSmartBack}
           />
         )}
 
@@ -191,7 +283,7 @@ function App() {
 
         {currentPage === 'profile' && (
           <ProfilePage
-            onBackToShop={() => handlePageChange('home')}
+            onBackToShop={handleSmartBack}
             wishlistItems={wishlistItems}
             onRemoveWishlist={handleRemoveWishlist}
             onAddToCart={handleAddToCart}
@@ -201,7 +293,7 @@ function App() {
         {currentPage === 'checkout' && (
           <CheckoutPage
             cartItems={cartItems}
-            onBackToShop={() => handlePageChange('home')}
+            onBackToShop={handleSmartBack}
             onOrderSuccess={handleOrderSuccess}
           />
         )}
